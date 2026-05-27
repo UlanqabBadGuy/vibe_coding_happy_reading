@@ -1,9 +1,13 @@
 {
   "name": "graybox",
   "displayName": "灰盒子阅读器",
-  "description": "Vibe Coding 等待时摸鱼看小说的 VS Code 插件",
+  "description": "Vibe Coding 等待看享受阅读时刻的 VS Code 插件",
   "version": "0.0.1",
   "publisher": "graybox",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UlanqabBadGuy/vibe_coding_happy_reading"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -11,7 +15,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:grayboxReaderSidebar"
+    "*"
   ],
   "main": "./out/extension.js",
   "contributes": {
