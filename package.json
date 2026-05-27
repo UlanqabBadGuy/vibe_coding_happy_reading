@@ -18,6 +18,7 @@
   "activationEvents": [
     "onCommand:graybox.openReader",
     "onCommand:graybox.openReaderWithFile",
+    "onCommand:graybox.resumeReader",
     "onView:grayboxReaderSidebar"
   ],
   "main": "./out/extension.js",
@@ -30,6 +31,14 @@
       {
         "command": "graybox.openReaderWithFile",
         "title": "📖 用灰盒子阅读器打开"
+      },
+      {
+        "command": "graybox.resumeReader",
+        "title": "📖 继续阅读"
+      },
+      {
+        "command": "graybox.removeBook",
+        "title": "🗑️ 从书架移除"
       }
     ],
     "keybindings": [
@@ -63,6 +72,13 @@
           "command": "graybox.openReaderWithFile",
           "when": "resourceExtname == .txt || resourceExtname == .docx",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "graybox.removeBook",
+          "when": "view == grayboxReaderSidebar && viewItem == bookItem",
+          "group": "inline"
         }
       ]
     }

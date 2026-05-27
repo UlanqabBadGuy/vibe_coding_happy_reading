@@ -5,6 +5,12 @@ import mammoth from 'mammoth';
 import * as jschardet from 'jschardet';
 import * as iconv from 'iconv-lite';
 
+interface Book {
+  path: string;
+  name: string;
+  addedAt: number;
+}
+
 interface ReaderState {
   filePath: string;
   scrollTop: number;
@@ -20,6 +26,8 @@ let currentFilePath: string | undefined;
 let currentFileName: string | undefined;
 let sidebarProvider!: ReaderSidebarProvider;
 
+const BOOKS_KEY = 'readerBooks';
+
 export function activate(context: vscode.ExtensionContext) {
   const openReader = vscode.commands.registerCommand('graybox.openReader', () => {
     openReaderPanel(context, undefined);
@@ -29,10 +37,58 @@ export function activate(context: vscode.ExtensionContext) {
     openReaderPanel(context, uri?.fsPath);
   });
 
+  const resumeReader = vscode.commands.registerCommand('graybox.resumeReader', (bookPath?: string) => {
+    if (bookPath) {
+      openReaderPanel(context, bookPath);
+    } else {
+      const last = getLastBook(context);
+      if (last) {
+        openReaderPanel(context, last.path);
+      } else {
+        vscode.window.showWarningMessage('没有找到上次阅读的文件');
+      }
+    }
+  });
+
+  const removeBook = vscode.commands.registerCommand('graybox.removeBook', (treeItem: vscode.TreeItem) => {
+    const bookPath = treeItem.tooltip;
+    if (typeof bookPath === 'string') {
+      removeBookFromShelf(context, bookPath);
+    }
+  });
+
   sidebarProvider = new ReaderSidebarProvider(context);
   const treeDisposable = vscode.window.registerTreeDataProvider('grayboxReaderSidebar', sidebarProvider);
 
-  context.subscriptions.push(openReader, openReaderWithFile, treeDisposable);
+  context.subscriptions.push(openReader, openReaderWithFile, resumeReader, removeBook, treeDisposable);
+}
+
+function getBooks(context: vscode.ExtensionContext): Book[] {
+  return context.globalState.get<Book[]>(BOOKS_KEY) || [];
+}
+
+function saveBooks(context: vscode.ExtensionContext, books: Book[]) {
+  context.globalState.update(BOOKS_KEY, books);
+}
+
+function addBook(context: vscode.ExtensionContext, path: string, name: string) {
+  const books = getBooks(context);
+  const existing = books.find(b => b.path === path);
+  if (!existing) {
+    books.unshift({ path, name, addedAt: Date.now() });
+    saveBooks(context, books);
+  }
+}
+
+function removeBookFromShelf(context: vscode.ExtensionContext, bookPath: string) {
+  const books = getBooks(context).filter(b => b.path !== bookPath);
+  saveBooks(context, books);
+  sidebarProvider.refresh();
+}
+
+function getLastBook(context: vscode.ExtensionContext): Book | undefined {
+  const books = getBooks(context);
+  return books.length > 0 ? books[0] : undefined;
 }
 
 async function openReaderPanel(context: vscode.ExtensionContext, filePath?: string) {
@@ -93,14 +149,17 @@ async function openReaderPanel(context: vscode.ExtensionContext, filePath?: stri
 
               currentFilePath = fp;
               currentFileName = fname;
+              addBook(context, fp, fname);
               context.workspaceState.update('readerLastFile', { path: fp, name: fname });
               sidebarProvider.refresh();
 
+              const savedState = context.workspaceState.get('readerState') as ReaderState | undefined;
               currentPanel.webview.postMessage({
                 command: 'fileLoaded',
                 content: content,
                 fileName: fname,
-                filePath: fp
+                filePath: fp,
+                chapterIndex: savedState?.chapterIndex ?? 0
               });
             }
           } catch (err: any) {
@@ -147,14 +206,17 @@ async function openReaderPanel(context: vscode.ExtensionContext, filePath?: stri
 
       currentFilePath = filePath;
       currentFileName = fname;
+      addBook(context, filePath, fname);
       context.workspaceState.update('readerLastFile', { path: filePath, name: fname });
       sidebarProvider.refresh();
 
+      const savedState2 = context.workspaceState.get('readerState') as ReaderState | undefined;
       currentPanel.webview.postMessage({
         command: 'fileLoaded',
         content: content,
         fileName: fname,
-        filePath: filePath
+        filePath: filePath,
+        chapterIndex: savedState2?.chapterIndex ?? 0
       });
     } catch (err: any) {
       if (currentPanel) {
@@ -171,13 +233,7 @@ class ReaderSidebarProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
   private _onDidChangeTreeData = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(private context: vscode.ExtensionContext) {
-    const last = context.workspaceState.get('readerLastFile') as { path: string; name: string } | undefined;
-    if (last) {
-      currentFilePath = last.path;
-      currentFileName = last.name;
-    }
-  }
+  constructor(private context: vscode.ExtensionContext) {}
 
   refresh() {
     this._onDidChangeTreeData.fire();
@@ -195,12 +251,20 @@ class ReaderSidebarProvider implements vscode.TreeDataProvider<vscode.TreeItem> 
     openItem.tooltip = '点击打开小说阅读面板';
     items.push(openItem);
 
-    if (currentFilePath && currentFileName) {
-      const lastItem = new vscode.TreeItem('📄 继续阅读: ' + currentFileName, vscode.TreeItemCollapsibleState.None);
-      lastItem.command = { command: 'graybox.openReader', title: '继续阅读' };
-      lastItem.tooltip = '继续上次阅读: ' + currentFilePath;
-      lastItem.description = '点击继续';
-      items.push(lastItem);
+    const books = getBooks(this.context);
+    if (books.length > 0) {
+      const shelfHeader = new vscode.TreeItem('📚 我的书架', vscode.TreeItemCollapsibleState.None);
+      shelfHeader.tooltip = '已导入的小说';
+      items.push(shelfHeader);
+
+      for (const book of books) {
+        const bookItem = new vscode.TreeItem('📄 ' + book.name, vscode.TreeItemCollapsibleState.None);
+        bookItem.command = { command: 'graybox.resumeReader', title: '继续阅读', arguments: [book.path] };
+        bookItem.tooltip = book.path;
+        bookItem.description = '点击阅读';
+        bookItem.contextValue = 'bookItem';
+        items.push(bookItem);
+      }
     }
 
     return items;

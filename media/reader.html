@@ -508,7 +508,7 @@
       });
     }
 
-    function loadFile(text, fileName) {
+    function loadFile(text, fileName, restoreChapterIdx) {
       chapters = parseChapters(text);
       fileNameEl.textContent = fileName;
 
@@ -520,7 +520,8 @@
         chapterSelect.appendChild(opt);
       }
 
-      renderChapter(0);
+      var targetIdx = (typeof restoreChapterIdx === 'number' && restoreChapterIdx >= 0 && restoreChapterIdx < chapters.length) ? restoreChapterIdx : 0;
+      renderChapter(targetIdx);
       readingArea.scrollTop = 0;
       welcomeEl.style.display = 'none';
       readerEl.classList.add('active');
@@ -541,7 +542,7 @@
       var msg = event.data;
       switch (msg.command) {
         case 'fileLoaded':
-          loadFile(msg.content, msg.fileName);
+          loadFile(msg.content, msg.fileName, msg.chapterIndex);
           break;
         case 'error':
           toast('❌ ' + msg.message);
