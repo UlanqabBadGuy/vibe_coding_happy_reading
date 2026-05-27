@@ -1,0 +1,79 @@
+{
+  "name": "graybox",
+  "displayName": "灰盒子阅读器",
+  "description": "Vibe Coding 等待时摸鱼看小说的 VS Code 插件",
+  "version": "0.0.1",
+  "publisher": "graybox",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:grayboxReaderSidebar"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "graybox.openReader",
+        "title": "📖 打开灰盒子阅读器"
+      },
+      {
+        "command": "graybox.openReaderWithFile",
+        "title": "📖 用灰盒子阅读器打开"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "graybox.openReader",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "grayboxReader",
+          "title": "灰盒子阅读器",
+          "icon": "$(book)"
+        }
+      ]
+    },
+    "views": {
+      "grayboxReader": [
+        {
+          "id": "grayboxReaderSidebar",
+          "name": "阅读器"
+        }
+      ]
+    },
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "graybox.openReaderWithFile",
+          "when": "resourceExtname == .txt || resourceExtname == .docx",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.7.2",
+    "jschardet": "^3.1.4",
+    "mammoth": "^1.12.0"
+  }
+}
