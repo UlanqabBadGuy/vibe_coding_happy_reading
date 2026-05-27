@@ -15,7 +15,9 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onCommand:graybox.openReader",
+    "onCommand:graybox.openReaderWithFile",
+    "onView:grayboxReaderSidebar"
   ],
   "main": "./out/extension.js",
   "contributes": {
